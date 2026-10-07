@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "ONE PRAYER",
+    "slug": "one-prayer",
+    "version": "1.0.0",
+    "scheme": "oneprayer",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#050a18",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "church.oneprayer.app",
+      "config": { "usesNonExemptEncryption": false }
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#050a18"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-font",
+      "expo-sharing"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
