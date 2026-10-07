@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { ActionSheetIOS, ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { ActionSheetIOS, ActivityIndicator, Alert, FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -50,9 +50,7 @@ export default function Pray() {
   };
 
   const more = (p: PrayerRequest) => {
-    ActionSheetIOS.showActionSheetWithOptions(
-      { options: ["Report this request", "Hide this request", "Cancel"], destructiveButtonIndex: 0, cancelButtonIndex: 2, title: p.title },
-      async (i) => {
+    const choose = async (i: number) => {
         if (i === 0) {
           setHidden(await hideRequest(p.id));
           Alert.alert("Thank you", "This request is hidden for you. Tell our moderators what’s wrong and they will review it.", [
@@ -62,8 +60,19 @@ export default function Pray() {
         } else if (i === 1) {
           setHidden(await hideRequest(p.id));
         }
-      },
-    );
+    };
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ["Report this request", "Hide this request", "Cancel"], destructiveButtonIndex: 0, cancelButtonIndex: 2, title: p.title },
+        choose,
+      );
+    } else {
+      Alert.alert(p.title, undefined, [
+        { text: "Report", style: "destructive", onPress: () => choose(0) },
+        { text: "Hide", onPress: () => choose(1) },
+        { text: "Cancel", style: "cancel" },
+      ]);
+    }
   };
 
   const visible = items.filter((p) => !hidden.includes(p.id));

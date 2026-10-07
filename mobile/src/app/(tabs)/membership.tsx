@@ -12,11 +12,11 @@ import { colors, fonts } from "@/theme";
  * next step, so this screen shows the offer without a buy button yet.
  */
 const BENEFITS = [
-  { icon: "book.pages", title: "Ask the Bible", text: "Answers built only on real verses, with the reference every time." },
-  { icon: "hands.sparkles", title: "Pray for yourself", text: "Say what’s on your heart and receive a personal prayer built on Scripture." },
-  { icon: "heart.text.square", title: "Pray for others, with words", text: "When you pray for someone, receive a prayer written for their need." },
-  { icon: "headphones", title: "Premium audio", text: "Bible chapters and guided prayers to listen to offline." },
-  { icon: "sparkles", title: "A new guided challenge every month", text: "Lent, Advent, New Year and more." },
+  { icon: { ios: "book.pages", android: "menu_book" }, title: "Ask the Bible", text: "Answers built only on real verses, with the reference every time." },
+  { icon: { ios: "hands.sparkles", android: "volunteer_activism" }, title: "Pray for yourself", text: "Say what’s on your heart and receive a personal prayer built on Scripture." },
+  { icon: { ios: "heart.text.square", android: "favorite" }, title: "Pray for others, with words", text: "When you pray for someone, receive a prayer written for their need." },
+  { icon: { ios: "headphones", android: "headphones" }, title: "Premium audio", text: "Bible chapters and guided prayers to listen to offline." },
+  { icon: { ios: "sparkles", android: "auto_awesome" }, title: "A new guided challenge every month", text: "Lent, Advent, New Year and more." },
 ] as const;
 
 const ABOUT = [

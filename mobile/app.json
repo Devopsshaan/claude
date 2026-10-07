@@ -33,6 +33,15 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "android": {
+      "package": "church.oneprayer.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0b1a33",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
     }
   }
 }
