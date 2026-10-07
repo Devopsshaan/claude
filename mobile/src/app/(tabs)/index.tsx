@@ -1,36 +1,60 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppState, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated";
 import { ScratchCard } from "@/components/ScratchCard";
-import { utcDayNumber, wordForDate } from "@/lib/word";
-import { loadPrayedDays, markPrayedToday, streakFrom } from "@/lib/store";
+import { wordForDate } from "@/lib/word";
+import { loadPrayedDays, localDayNumber, markPrayedToday, rememberRevealed, revealedWordDate, streakFrom } from "@/lib/store";
 import { colors, fonts } from "@/theme";
 
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export default function Today() {
   const insets = useSafeAreaInsets();
-  const word = useMemo(() => wordForDate(), []);
-  const today = utcDayNumber(new Date());
+  const reduceMotion = useReducedMotion();
+  // Re-read the date whenever the app comes back to the foreground, so a phone left
+  // open overnight shows the new Word (covered again) and the right day.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (s) => s === "active" && setNow(new Date()));
+    return () => sub.remove();
+  }, []);
+  const word = useMemo(() => wordForDate(now), [now]);
+  const today = localDayNumber(now);
   const [days, setDays] = useState<number[]>([]);
   const [revealed, setRevealed] = useState(false);
   const [showPrayer, setShowPrayer] = useState(false);
+  const revealing = useRef(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    loadPrayedDays().then((d) => {
+    let alive = true;
+    revealing.current = false;
+    setShowPrayer(false);
+    Promise.all([loadPrayedDays(), revealedWordDate()]).then(([d, lastWord]) => {
+      if (!alive) return;
       setDays(d);
-      if (d.includes(today)) setRevealed(true);
+      const done = lastWord === word.date;
+      setRevealed(done);
+      revealing.current = done;
+      setReady(true);
     });
-  }, [today]);
+    return () => {
+      alive = false;
+    };
+  }, [word.date]);
 
+  // Runs once per Word, whether revealed by scratching or by the button.
   const onReveal = useCallback(async () => {
+    if (revealing.current) return;
+    revealing.current = true;
     setRevealed(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await rememberRevealed(word.date);
     setDays(await markPrayedToday());
-  }, []);
+  }, [word.date]);
 
   const share = useCallback(() => {
     Share.share({ message: `“${word.verse.text}”\n— ${word.verse.ref} (WEB)\n\nYour Word for Today on ONE PRAYER: https://oneprayer.church/word` });
@@ -43,12 +67,17 @@ export default function Today() {
     <LinearGradient colors={[colors.navy950, colors.navy900, "#1d3a72"]} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + 24, paddingBottom: 40 }]}>
         <Text style={styles.eyebrow}>ONE PRAYER</Text>
-        <Text style={styles.title}>Your Word for Today</Text>
+        <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={1.4}>
+          Your Word for Today
+        </Text>
         <Text style={styles.sub}>{revealed ? "Take a quiet moment with today’s Scripture." : "Take a quiet moment. Scratch below to reveal today’s Scripture."}</Text>
 
         <View style={styles.card}>
           <Text style={styles.cardLabel}>TODAY&apos;S SCRIPTURE</Text>
-          <ScratchCard revealed={revealed} onReveal={onReveal}>
+          {!ready ? (
+            <View style={{ minHeight: 170 }} />
+          ) : (
+          <ScratchCard key={word.date} revealed={revealed} onReveal={onReveal}>
             <View style={styles.verseBox}>
               <Text style={styles.verse}>“{word.verse.text}”</Text>
               <Text style={styles.ref}>
@@ -56,23 +85,24 @@ export default function Today() {
               </Text>
             </View>
           </ScratchCard>
-          {!revealed && (
-            <Pressable onPress={onReveal} hitSlop={8} style={styles.revealBtn} accessibilityRole="button">
+          )}
+          {ready && !revealed && (
+            <Pressable onPress={onReveal} style={styles.revealBtn} accessibilityRole="button">
               <Text style={styles.revealText}>Reveal it for me</Text>
             </Pressable>
           )}
         </View>
 
         {revealed && (
-          <Animated.View entering={FadeInDown.duration(600)}>
+          <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(600)}>
             <View style={styles.streak}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.streakTitle}>
                   {streak} {streak === 1 ? "day" : "days"} with God
                 </Text>
-                <Text style={styles.streakSub}>You prayed today. See you tomorrow.</Text>
+                <Text style={styles.streakSub}>You received today&apos;s Word. See you tomorrow.</Text>
               </View>
-              <View style={styles.week}>
+              <View style={styles.week} accessible accessibilityLabel={`Received your Word on ${week.filter((d) => days.includes(d)).length} of the last 7 days`}>
                 {week.map((d) => {
                   const on = days.includes(d);
                   const letter = DAY_LETTERS[new Date(d * 86_400_000).getUTCDay()];
@@ -93,7 +123,7 @@ export default function Today() {
               <Text style={styles.primaryText}>{showPrayer ? "Amen" : "Pray with this Word"}</Text>
             </Pressable>
             {showPrayer && (
-              <Animated.View entering={FadeInDown.duration(400)} style={styles.prayerBox}>
+              <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(400)} style={styles.prayerBox}>
                 <Text style={styles.prayer}>{word.prayer}</Text>
               </Animated.View>
             )}
@@ -119,7 +149,7 @@ const styles = StyleSheet.create({
   verse: { color: colors.cream50, fontFamily: fonts.serifItalic, fontSize: 23, lineHeight: 32 },
   ref: { color: colors.cream50, fontFamily: fonts.sansBold, fontSize: 14, marginTop: 12 },
   refMuted: { color: colors.muted, fontFamily: fonts.sans },
-  revealBtn: { marginTop: 14, alignSelf: "flex-start" },
+  revealBtn: { marginTop: 8, alignSelf: "flex-start", minHeight: 44, justifyContent: "center", paddingRight: 12 },
   revealText: { color: colors.cream50, fontFamily: fonts.sansMedium, fontSize: 15, textDecorationLine: "underline" },
   streak: { flexDirection: "row", alignItems: "center", marginTop: 18, padding: 16, borderRadius: 20, backgroundColor: "rgba(16,35,74,0.75)", borderWidth: 1, borderColor: "rgba(240,214,154,0.18)" },
   streakTitle: { color: colors.cream50, fontFamily: fonts.sansBold, fontSize: 16 },

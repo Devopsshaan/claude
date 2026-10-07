@@ -70,15 +70,17 @@ type Props = {
   open: SharedValue<number>;
   tiltX: SharedValue<number>;
   tiltY: SharedValue<number>;
+  /** Reduce Motion: freeze the turning rays, twinkle and drifting dust. */
+  still?: boolean;
 };
 
-export function LightSky({ width, height, centerY, open, tiltX, tiltY }: Props) {
+export function LightSky({ width, height, centerY, open, tiltX, tiltY, still = false }: Props) {
   const clock = useClock();
   const uniforms = useDerivedValue(() => ({
     res: [width, height],
     center: [width / 2 + tiltX.value * 8, centerY + tiltY.value * 8],
     tilt: [tiltX.value, tiltY.value],
-    t: clock.value / 1000,
+    t: still ? 12 : clock.value / 1000,
     open: open.value,
   }));
 

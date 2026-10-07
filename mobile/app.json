@@ -11,18 +11,25 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "church.oneprayer.app",
-      "config": { "usesNonExemptEncryption": false }
-    },
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#050a18"
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "plugins": [
       "expo-router",
       "expo-status-bar",
       "expo-font",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#050a18"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

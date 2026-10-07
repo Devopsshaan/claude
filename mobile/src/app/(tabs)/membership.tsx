@@ -1,4 +1,6 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import { SITE } from "@/lib/api";
 import { LinearGradient } from "expo-linear-gradient";
 import { SymbolView } from "expo-symbols";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +19,13 @@ const BENEFITS = [
   { icon: "sparkles", title: "A new guided challenge every month", text: "Lent, Advent, New Year and more." },
 ] as const;
 
+const ABOUT = [
+  { label: "Privacy policy", path: "/privacy" },
+  { label: "Terms of service", path: "/terms" },
+  { label: "Community guidelines", path: "/guidelines" },
+  { label: "Contact us", path: "/contact" },
+];
+
 const FREE = ["Sharing prayer requests", "Being prayed for and praying for others", "Live prayer room", "Your Word for Today", "Reading the whole Bible"];
 
 export default function Membership() {
@@ -25,7 +34,9 @@ export default function Membership() {
     <LinearGradient colors={[colors.navy950, "#1a2c55"]} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 24, paddingHorizontal: 20, paddingBottom: 40 }}>
         <Text style={styles.eyebrow}>ONE PRAYER MEMBERSHIP</Text>
-        <Text style={styles.title}>Go deeper, every day</Text>
+        <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={1.4}>
+          Go deeper, every day
+        </Text>
         <Text style={styles.sub}>Prayer on ONE PRAYER stays free for everyone. Membership adds tools to help you pray and understand Scripture.</Text>
 
         <View style={styles.card}>
@@ -51,6 +62,14 @@ export default function Membership() {
           </Text>
         ))}
         <Text style={styles.small}>Membership never buys priority for prayer requests, and no prayer or outcome is promised in exchange for payment.</Text>
+
+        <Text style={styles.section}>ABOUT ONE PRAYER</Text>
+        {ABOUT.map((a) => (
+          <Pressable key={a.path} onPress={() => WebBrowser.openBrowserAsync(`${SITE}${a.path}`)} style={styles.aboutRow} accessibilityRole="link">
+            <Text style={styles.aboutText}>{a.label}</Text>
+          </Pressable>
+        ))}
+        <Text style={styles.small}>Scripture quotations from the World English Bible (public domain).</Text>
       </ScrollView>
     </LinearGradient>
   );
@@ -68,5 +87,7 @@ const styles = StyleSheet.create({
   soonText: { color: colors.gold300, fontFamily: fonts.sansBold, fontSize: 15 },
   section: { color: colors.gold300, fontFamily: fonts.sansBold, fontSize: 12, letterSpacing: 2.5, marginTop: 28, marginBottom: 10 },
   free: { color: colors.cream50, fontFamily: fonts.sans, fontSize: 15, lineHeight: 26 },
+  aboutRow: { minHeight: 44, justifyContent: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(240,214,154,0.2)" },
+  aboutText: { color: colors.cream50, fontFamily: fonts.sans, fontSize: 15 },
   small: { color: colors.muted, fontFamily: fonts.sans, fontSize: 12, lineHeight: 18, marginTop: 16 },
 });

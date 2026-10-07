@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -10,6 +10,7 @@ import Animated, {
   useAnimatedSensor,
   useAnimatedStyle,
   useDerivedValue,
+  useReducedMotion,
   useSharedValue,
   withDelay,
   withRepeat,
@@ -40,19 +41,22 @@ export function DoorScene({ onDone }: Props) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [opening, setOpening] = useState(false);
-  const reduceMotion = useRef(false);
+  const reduceMotion = useReducedMotion();
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const finished = useRef(false);
 
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then((v) => (reduceMotion.current = v));
     const list = timers.current;
     return () => list.forEach(clearTimeout);
   }, []);
 
-  // Arch size: the same proportions as the website (3:5), sized for the phone.
-  const archW = Math.min(width * 0.6, 300, height * 0.3);
+  // Arch size: the website's proportions (3:5), sized so it never overlaps the verse
+  // and button below it, even on the smallest iPhones.
+  const archTop = insets.top + Math.max(40, height * 0.07);
+  const bottomBlock = 300 + insets.bottom;
+  const maxArchH = Math.max(180, height - archTop - bottomBlock - 56);
+  const archW = Math.min(width * 0.6, 300, (maxArchH * 3) / 5);
   const archH = (archW * 5) / 3;
-  const archTop = insets.top + Math.max(40, height * 0.08);
   const lightCenterY = archTop + archH * 0.42;
 
   // Animation state
@@ -64,13 +68,15 @@ export function DoorScene({ onDone }: Props) {
   const knock = useSharedValue(0);
 
   useEffect(() => {
+    if (reduceMotion) return;
     breath.value = withRepeat(withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.sin) }), -1, true);
-  }, [breath]);
+  }, [breath, reduceMotion]);
 
   // Gyro parallax: the scene leans gently with the phone.
   const gravity = useAnimatedSensor(SensorType.GRAVITY, { interval: 16 });
-  const tiltX = useDerivedValue(() => Math.max(-1, Math.min(1, gravity.sensor.value.x / 9.81)));
-  const tiltY = useDerivedValue(() => Math.max(-1, Math.min(1, (gravity.sensor.value.y + 6.5) / 9.81)));
+  const motion = reduceMotion ? 0 : 1;
+  const tiltX = useDerivedValue(() => motion * Math.max(-1, Math.min(1, gravity.sensor.value.x / 9.81)));
+  const tiltY = useDerivedValue(() => motion * Math.max(-1, Math.min(1, (gravity.sensor.value.y + 6.5) / 9.81)));
 
   const sceneStyle = useAnimatedStyle(() => {
     const s = interpolate(camera.value, [0, 0.55, 1], [1, 1.32, 2.2]);
@@ -96,12 +102,19 @@ export function DoorScene({ onDone }: Props) {
   const seamStyle = useAnimatedStyle(() => ({ opacity: interpolate(doors.value, [0, 0.15, 0.4], [0.55, 1, 0]) }));
   const textStyle = useAnimatedStyle(() => ({ opacity: 1 - Math.min(1, doors.value * 3) }));
 
-  const finish = useCallback(() => onDone(), [onDone]);
+  // Runs once, whether from Skip, the end of the animation, or a double tap.
+  const finish = useCallback(() => {
+    if (finished.current) return;
+    finished.current = true;
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    onDone();
+  }, [onDone]);
 
   const start = useCallback(() => {
     if (opening) return;
     setOpening(true);
-    if (reduceMotion.current) {
+    if (reduceMotion) {
       finish();
       return;
     }
@@ -124,16 +137,16 @@ export function DoorScene({ onDone }: Props) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }, 380 + FLOOD_AT));
     timers.current.push(setTimeout(finish, 380 + DONE_AT));
-  }, [opening, finish, doors, open, reveal, camera, knock]);
+  }, [opening, reduceMotion, finish, doors, open, reveal, camera, knock]);
 
   const leafW = archW / 2;
   const archLeft = (width - archW) / 2;
 
   return (
     <View style={styles.root} accessibilityViewIsModal>
-      <LightSky width={width} height={height} centerY={lightCenterY} open={open} tiltX={tiltX} tiltY={tiltY} />
+      <LightSky width={width} height={height} centerY={lightCenterY} open={open} tiltX={tiltX} tiltY={tiltY} still={reduceMotion} />
 
-      <Animated.View style={[styles.stage, { top: archTop }, sceneStyle]} pointerEvents="none">
+      <Animated.View style={[styles.stage, { top: archTop }, sceneStyle]} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         {/* Stone arch: three rings, like the website */}
         <View style={[styles.archRing, { width: archW + 64, height: archH + 34, borderTopLeftRadius: (archW + 64) / 2, borderTopRightRadius: (archW + 64) / 2, backgroundColor: colors.stone }]} />
         <View style={[styles.archRing, { width: archW + 36, height: archH + 18, top: 16, borderTopLeftRadius: (archW + 36) / 2, borderTopRightRadius: (archW + 36) / 2, backgroundColor: "#5b4a38" }]} />
@@ -159,10 +172,10 @@ export function DoorScene({ onDone }: Props) {
       </Pressable>
 
       <Animated.View style={[styles.bottom, { paddingBottom: insets.bottom + 28 }, textStyle]}>
-        <Text style={styles.verse} accessibilityRole="header">“{DOOR_VERSE.text}”</Text>
-        <Text style={styles.ref}>{DOOR_VERSE.ref} ({DOOR_VERSE.translation})</Text>
+        <Text style={styles.verse} accessibilityRole="header" maxFontSizeMultiplier={1.3}>“{DOOR_VERSE.text}”</Text>
+        <Text style={styles.ref} maxFontSizeMultiplier={1.3}>{DOOR_VERSE.ref} ({DOOR_VERSE.translation})</Text>
         <Pressable onPress={start} disabled={opening} style={({ pressed }) => [styles.cta, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="button" accessibilityLabel="Open the door">
-          <Text style={styles.ctaText}>Open the door</Text>
+          <Text style={styles.ctaText} maxFontSizeMultiplier={1.3}>Open the door</Text>
         </Pressable>
       </Animated.View>
     </View>
@@ -194,7 +207,7 @@ const styles = StyleSheet.create({
   archRing: { position: "absolute", top: 0, shadowColor: "#000", shadowOpacity: 0.7, shadowRadius: 30, shadowOffset: { width: 0, height: 20 } },
   seam: { borderWidth: 2, borderColor: "rgba(255,214,140,0.9)", borderTopLeftRadius: 999, borderTopRightRadius: 999 },
   leaf: { position: "absolute", overflow: "hidden", backfaceVisibility: "hidden" },
-  skip: { position: "absolute", right: 16, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },
+  skip: { position: "absolute", right: 12, minHeight: 44, minWidth: 64, paddingHorizontal: 14, alignItems: "center", justifyContent: "center", borderRadius: 999 },
   skipText: { color: "rgba(253,248,236,0.85)", fontFamily: fonts.sansMedium, fontSize: 15 },
   bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 28, alignItems: "center" },
   verse: { color: colors.cream50, fontFamily: fonts.serifItalic, fontSize: 21, lineHeight: 30, textAlign: "center", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 8 },
