@@ -17,6 +17,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { Chapel } from "@/components/Chapel";
+import { useCanvasRef } from "@shopify/react-native-skia";
+import { shareChapel } from "@/lib/share";
 import { loadPrayedDays, localDayNumber, streakFrom } from "@/lib/store";
 import { glowFor, milestoneAt, nextMilestone, piecesFor } from "@/lib/sanctuary";
 import { DAYS } from "@/lib/days";
@@ -35,6 +37,7 @@ export default function Home() {
   const reduceMotion = useReducedMotion();
   const params = useLocalSearchParams<{ grew?: string }>();
 
+  const canvasRef = useCanvasRef();
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s) => s === "active" && setNow(new Date()));
@@ -99,15 +102,22 @@ export default function Home() {
   return (
     <View style={styles.root}>
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Chapel width={width} height={height} ground={ground} days={total} pieces={pieces} newest={justReached?.piece ?? null} glow={glow} grow={grow} tiltX={tiltX} tiltY={tiltY} still={reduceMotion} />
+        <Chapel width={width} height={height} ground={ground} days={total} pieces={pieces} newest={justReached?.piece ?? null} glow={glow} grow={grow} tiltX={tiltX} tiltY={tiltY} still={reduceMotion} canvasRef={canvasRef} />
       </View>
 
-      <View style={[styles.top, { top: insets.top + 10 }]} pointerEvents="none">
-        <Text style={styles.eyebrow}>YOUR SANCTUARY</Text>
-        <Text style={styles.count}>
-          {total === 0 ? "Not yet begun" : `Day ${total}`}
-          {streak > 1 ? `  ·  ${streak}-day streak` : ""}
-        </Text>
+      <View style={[styles.top, { top: insets.top + 10 }]}>
+        <View style={{ flex: 1 }} pointerEvents="none">
+          <Text style={styles.eyebrow}>YOUR SANCTUARY</Text>
+          <Text style={styles.count}>
+            {total === 0 ? "Not yet begun" : `Day ${total}`}
+            {streak > 1 ? `  ·  ${streak}-day streak` : ""}
+          </Text>
+        </View>
+        {total > 0 && (
+          <Pressable onPress={() => shareChapel(canvasRef, total)} style={styles.shareBtn} accessibilityRole="button" accessibilityLabel="Share my sanctuary">
+            <Text style={styles.shareText}>Share</Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={[styles.panel, { marginBottom: insets.bottom + 12 }]}>
@@ -141,7 +151,9 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.night, justifyContent: "flex-end" },
-  top: { position: "absolute", left: 24, right: 24 },
+  top: { position: "absolute", left: 24, right: 16, flexDirection: "row", alignItems: "flex-start" },
+  shareBtn: { minHeight: 44, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1, borderColor: "rgba(240,214,154,0.45)", backgroundColor: "rgba(6,12,28,0.45)", justifyContent: "center", marginTop: 6 },
+  shareText: { color: colors.gold300, fontFamily: fonts.sansBold, fontSize: 14 },
   eyebrow: { color: colors.gold300, fontFamily: fonts.sansBold, fontSize: 12, letterSpacing: 3 },
   count: { color: colors.cream50, fontFamily: fonts.serif, fontSize: 30, marginTop: 4 },
   panel: { marginHorizontal: 14, marginBottom: 10, paddingHorizontal: 22, paddingTop: 22, paddingBottom: 22, gap: 14, borderRadius: 30, backgroundColor: "rgba(6,12,28,0.72)", borderWidth: 1, borderColor: "rgba(240,214,154,0.14)" },

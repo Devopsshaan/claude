@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, type RefObject } from "react";
 import {
   BlurMask,
   Canvas,
+  type CanvasRef,
   Circle,
   Fill,
   Group,
@@ -66,11 +67,13 @@ export type ChapelProps = {
   tiltX: SharedValue<number>;
   tiltY: SharedValue<number>;
   still?: boolean;
+  /** Lets the parent snapshot the scene (for sharing). */
+  canvasRef?: RefObject<CanvasRef | null>;
 };
 
 const GLASS = ["#c2334d", "#2e63b8", "#e0a53a", "#2f8a5a", "#7b4fa8", "#d9652f"];
 
-export function Chapel({ width, height, ground, days, pieces, newest, glow, grow, tiltX, tiltY, still = false }: ChapelProps) {
+export function Chapel({ width, height, ground, days, pieces, newest, glow, grow, tiltX, tiltY, still = false, canvasRef }: ChapelProps) {
   const clock = useClock();
   const uniforms = useDerivedValue(() => ({
     res: [width, height],
@@ -195,7 +198,7 @@ export function Chapel({ width, height, ground, days, pieces, newest, glow, grow
   const stoneColor = "#2b3550";
 
   return (
-    <Canvas style={{ width, height }} pointerEvents="none">
+    <Canvas ref={canvasRef} style={{ width, height }} pointerEvents="none">
       <Fill>
         <Shader source={skyEffect} uniforms={uniforms} />
       </Fill>
