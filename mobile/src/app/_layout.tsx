@@ -36,8 +36,7 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.night } }}>
         <Stack.Screen name="index" />
-        <Stack.Screen name="door" options={{ animation: "fade" }} />
-        <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
+        <Stack.Screen name="pray" options={{ presentation: "fullScreenModal", animation: "fade" }} />
       </Stack>
     </GestureHandlerRootView>
   );
