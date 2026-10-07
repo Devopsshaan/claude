@@ -20,6 +20,8 @@ import { Chapel } from "@/components/Chapel";
 import { loadPrayedDays, localDayNumber, streakFrom } from "@/lib/store";
 import { glowFor, milestoneAt, nextMilestone, piecesFor } from "@/lib/sanctuary";
 import { DAYS } from "@/lib/days";
+import { loadProfile } from "@/lib/profile";
+import { configurePurchases } from "@/lib/purchases";
 import { colors, fonts } from "@/theme";
 
 /**
@@ -40,7 +42,14 @@ export default function Home() {
   }, []);
   const today = localDayNumber(now);
 
+  // First launch → onboarding (which leads to the paywall), otherwise load the chapel.
   const [days, setDays] = useState<number[] | null>(null);
+  useEffect(() => {
+    configurePurchases();
+    loadProfile().then((p) => {
+      if (!p?.onboarded) router.replace("/onboarding");
+    });
+  }, []);
   useEffect(() => {
     loadPrayedDays().then(setDays);
   }, [today, params.grew]);
